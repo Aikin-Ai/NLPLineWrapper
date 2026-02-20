@@ -21,17 +21,15 @@ To run this script from its source code, you need:
 # Installation & Setup
 1. Download or save the `excel_wrapper.py` file to your computer.
 2. Open your computer's terminal or command prompt.
-3. Install the required openpyxl library by running the following command:
-```bash
-pip install openpyxl
-```
-# How to Run
-- Open your terminal or command prompt.
-- Navigate to the folder where you saved the excel_wrapper.py script using the cd command. For example:
+3. Navigate to the folder where you saved the excel_wrapper.py script. For example:
 ```bash
 cd path/to/your/folder
 ```
-- Run the script using Python:
+4. Install the required libraries by running the following command:
+```bash
+pip install -r requirements.txt
+```
+5. Run the script using Python:
 ```bash
 python excel_wrapper.py
 ```
