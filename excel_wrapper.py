@@ -14,7 +14,7 @@ class ExcelWrapperApp:
         self.root.resizable(False, False)
         
         self.filepath = tk.StringVar()
-        self.preserve_symbols = tk.BooleanVar(value=True)
+        self.preserve_symbols = tk.BooleanVar(value=False)
         self.force_wrap_var = tk.BooleanVar(value=True)
         
         self.create_widgets()
