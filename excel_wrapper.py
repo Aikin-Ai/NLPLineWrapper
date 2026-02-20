@@ -10,11 +10,12 @@ class ExcelWrapperApp:
     def __init__(self, root):
         self.root = root
         self.root.title("NLP Translation Word Wrapper")
-        self.root.geometry("510x280")
+        self.root.geometry("510x300")
         self.root.resizable(False, False)
         
         self.filepath = tk.StringVar()
         self.preserve_symbols = tk.BooleanVar(value=True)
+        self.force_wrap_var = tk.BooleanVar(value=True)
         
         self.create_widgets()
 
@@ -57,6 +58,10 @@ class ExcelWrapperApp:
         ttk.Radiobutton(frame_radio, text="Preserve", variable=self.preserve_symbols, value=True).pack(side="left", padx=(0, 10))
         ttk.Radiobutton(frame_radio, text="Remove", variable=self.preserve_symbols, value=False).pack(side="left")
 
+        # Force Wrap Option
+        ttk.Label(frame_settings, text="Long Words:").grid(row=3, column=0, sticky="e", **padding)
+        ttk.Checkbutton(frame_settings, text="Force wrap if longer than max chars", variable=self.force_wrap_var).grid(row=3, column=1, columnspan=4, sticky="w", **padding)
+
         # --- Process Button ---
         frame_action = ttk.Frame(self.root)
         frame_action.pack(fill="x", padx=10, pady=20)
@@ -75,7 +80,7 @@ class ExcelWrapperApp:
         if filepath:
             self.filepath.set(filepath)
 
-    def wrap_text(self, text, max_chars, preserve):
+    def wrap_text(self, text, max_chars, preserve, force_wrap):
         if text is None:
             return None
         
@@ -103,14 +108,31 @@ class ExcelWrapperApp:
 
             for word in words:
                 space_len = 1 if current_line else 0
-                if current_len + len(word) + space_len <= max_chars:
-                    current_line.append(word)
-                    current_len += len(word) + space_len
-                else:
+                
+                if force_wrap and len(word) > max_chars:
+                    # Flush the current line first if it's not empty
                     if current_line:
                         lines.append(" ".join(current_line))
-                    current_line = [word]
-                    current_len = len(word)
+                        current_line = []
+                        current_len = 0
+                        
+                    # Split the long word into chunks of max_chars
+                    for i in range(0, len(word), max_chars):
+                        chunk = word[i:i+max_chars]
+                        if i + max_chars < len(word):
+                            lines.append(chunk) # Complete chunk goes on its own line
+                        else:
+                            current_line = [chunk] # The remainder starts a new line
+                            current_len = len(chunk)
+                else:
+                    if current_len + len(word) + space_len <= max_chars:
+                        current_line.append(word)
+                        current_len += len(word) + space_len
+                    else:
+                        if current_line:
+                            lines.append(" ".join(current_line))
+                        current_line = [word]
+                        current_len = len(word)
 
             if current_line:
                 lines.append(" ".join(current_line))
@@ -145,13 +167,14 @@ class ExcelWrapperApp:
             # Determine end row
             end_row = int(end_row_str) if end_row_str else sheet.max_row
             preserve = self.preserve_symbols.get()
+            force_wrap = self.force_wrap_var.get()
 
             # 2. Iterate and wrap Column C (Index 3)
             changes_made = 0
             for row_idx in range(start_row, end_row + 1):
                 cell = sheet.cell(row=row_idx, column=3) # Column C
                 if cell.value:
-                    new_text = self.wrap_text(cell.value, max_chars, preserve)
+                    new_text = self.wrap_text(cell.value, max_chars, preserve, force_wrap)
                     if new_text != cell.value:
                         cell.value = new_text
                         changes_made += 1
