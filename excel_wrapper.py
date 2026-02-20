@@ -9,8 +9,8 @@ import openpyxl
 class ExcelWrapperApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Excel Translation Word Wrapper")
-        self.root.geometry("450x380")
+        self.root.title("NLP Translation Word Wrapper")
+        self.root.geometry("510x280")
         self.root.resizable(False, False)
         
         self.filepath = tk.StringVar()
@@ -47,7 +47,7 @@ class ExcelWrapperApp:
         # Char Count
         ttk.Label(frame_settings, text="Max Chars per Line:").grid(row=1, column=0, sticky="e", **padding)
         self.entry_chars = ttk.Entry(frame_settings, width=10)
-        self.entry_chars.insert(0, "40")
+        self.entry_chars.insert(0, "20")
         self.entry_chars.grid(row=1, column=1, sticky="w", **padding)
 
         # Preserve Options
