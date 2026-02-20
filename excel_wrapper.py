@@ -1,21 +1,28 @@
 import os
 import re
+import textwrap
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 import openpyxl
+
+MAPPINGS = {
+    "\n": "◙",
+    "?": "？",
+    "  ": " ",
+    " .": ".",
+}
 
 
 class ExcelWrapperApp:
     def __init__(self, root):
         self.root = root
         self.root.title("NLP Translation Word Wrapper")
-        self.root.geometry("510x300")
+        self.root.geometry("510x280")
         self.root.resizable(False, False)
         
         self.filepath = tk.StringVar()
         self.preserve_symbols = tk.BooleanVar(value=False)
-        self.force_wrap_var = tk.BooleanVar(value=True)
         
         self.create_widgets()
 
@@ -48,7 +55,7 @@ class ExcelWrapperApp:
         # Char Count
         ttk.Label(frame_settings, text="Max Chars per Line:").grid(row=1, column=0, sticky="e", **padding)
         self.entry_chars = ttk.Entry(frame_settings, width=10)
-        self.entry_chars.insert(0, "20")
+        self.entry_chars.insert(0, "18")
         self.entry_chars.grid(row=1, column=1, sticky="w", **padding)
 
         # Preserve Options
@@ -57,10 +64,6 @@ class ExcelWrapperApp:
         frame_radio.grid(row=2, column=1, columnspan=3, sticky="w", **padding)
         ttk.Radiobutton(frame_radio, text="Preserve", variable=self.preserve_symbols, value=True).pack(side="left", padx=(0, 10))
         ttk.Radiobutton(frame_radio, text="Remove", variable=self.preserve_symbols, value=False).pack(side="left")
-
-        # Force Wrap Option
-        ttk.Label(frame_settings, text="Long Words:").grid(row=3, column=0, sticky="e", **padding)
-        ttk.Checkbutton(frame_settings, text="Force wrap if longer than max chars", variable=self.force_wrap_var).grid(row=3, column=1, columnspan=4, sticky="w", **padding)
 
         # --- Process Button ---
         frame_action = ttk.Frame(self.root)
@@ -80,11 +83,14 @@ class ExcelWrapperApp:
         if filepath:
             self.filepath.set(filepath)
 
-    def wrap_text(self, text, max_chars, preserve, force_wrap):
+    def wrap_text(self, text, max_chars, preserve):
         if text is None:
             return None
         
         text = str(text)
+
+        for a, b in MAPPINGS.items():
+            text=text.replace(a, b)
 
         if not preserve:
             # Replace existing symbols with space, then normalize multiple spaces
@@ -94,52 +100,12 @@ class ExcelWrapperApp:
         else:
             # Split by existing ◙ to preserve hard breaks
             paragraphs = text.split('◙')
-
+        
         wrapped_paragraphs = []
         for p in paragraphs:
-            words = [w for w in p.split(' ') if w] # Split by space, ignore empty
-            if not words:
-                wrapped_paragraphs.append("")
-                continue
-
-            lines = []
-            current_line = []
-            current_len = 0
-
-            for word in words:
-                space_len = 1 if current_line else 0
-                
-                if force_wrap and len(word) > max_chars:
-                    # Flush the current line first if it's not empty
-                    if current_line:
-                        lines.append(" ".join(current_line))
-                        current_line = []
-                        current_len = 0
-                        
-                    # Split the long word into chunks of max_chars
-                    for i in range(0, len(word), max_chars):
-                        chunk = word[i:i+max_chars]
-                        if i + max_chars < len(word):
-                            lines.append(chunk) # Complete chunk goes on its own line
-                        else:
-                            current_line = [chunk] # The remainder starts a new line
-                            current_len = len(chunk)
-                else:
-                    if current_len + len(word) + space_len <= max_chars:
-                        current_line.append(word)
-                        current_len += len(word) + space_len
-                    else:
-                        if current_line:
-                            lines.append(" ".join(current_line))
-                        current_line = [word]
-                        current_len = len(word)
-
-            if current_line:
-                lines.append(" ".join(current_line))
-
-            wrapped_paragraphs.append("◙".join(lines))
-
-        return "◙".join(wrapped_paragraphs)
+            current_line = MAPPINGS["\n"].join(textwrap.wrap(p, width=max_chars))
+            wrapped_paragraphs.append(current_line)
+        return MAPPINGS["\n"].join(wrapped_paragraphs)
 
     def process_file(self):
         file_path = self.filepath.get()
@@ -167,20 +133,19 @@ class ExcelWrapperApp:
             # Determine end row
             end_row = int(end_row_str) if end_row_str else sheet.max_row
             preserve = self.preserve_symbols.get()
-            force_wrap = self.force_wrap_var.get()
 
             # 2. Iterate and wrap Column C (Index 3)
             changes_made = 0
             for row_idx in range(start_row, end_row + 1):
                 cell = sheet.cell(row=row_idx, column=3) # Column C
                 if cell.value:
-                    new_text = self.wrap_text(cell.value, max_chars, preserve, force_wrap)
+                    new_text = self.wrap_text(cell.value, max_chars, preserve)
                     if new_text != cell.value:
                         cell.value = new_text
                         changes_made += 1
 
             # 3. Rename original file to .bac
-            backup_path = file_path + ".bac"
+            backup_path = file_path[:-5] + ".bac.xlsx"
             # os.replace handles overwriting if a .bac already exists
             os.replace(file_path, backup_path)
 
